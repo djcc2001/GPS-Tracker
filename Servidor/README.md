@@ -27,7 +27,7 @@ Servidor backend desarrollado en **Python** con **FastAPI** que recibe, almacena
 | Característica | Descripción |
 |---------------|-------------|
 | 📍 **API REST** | Endpoints para recibir y consultar ubicaciones |
-| 🗄️ **Almacenamiento** | Base de datos SQLite |
+| 🗄️ **Almacenamiento** | Base de datos PostgreSQL |
 | 🗺️ **Dashboard web** | Mapa interactivo con Leaflet + OpenStreetMap |
 | 🔐 **Autenticación** | API Key para todos los endpoints |
 | 📊 **Consulta avanzada** | Filtrado por dispositivo, fecha y hora |
@@ -45,7 +45,7 @@ Servidor backend desarrollado en **Python** con **FastAPI** que recibe, almacena
                              │ POST /api/location
                              ▼
 ┌────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│  Navegador │ ◄──► │   FastAPI       │ ◄──► │    SQLite       │
+│  Navegador │ ◄──► │   FastAPI       │ ◄──► │  PostgreSQL     │
 │  (Mapa)    │      │   (Python)      │      │  (Database)     │
 └────────────┘      └─────────────────┘      └─────────────────┘
 ```
@@ -121,7 +121,7 @@ Headers: x-api-key: clave_secreta_gps_2024
 ### Requisitos
 
 - Python 3.8+
-- SQLite (incluido en Python)
+- PostgreSQL
 
 ### Paso 1: Crear entorno virtual
 
@@ -142,7 +142,7 @@ pip install fastapi uvicorn sqlalchemy pydantic python-dotenv
 
 Crear archivo `.env`:
 ```env
-DATABASE_URL=sqlite:///gps_tracker.db
+DATABASE_URL=postgresql://user:password@localhost/gps_tracker
 SECRET_KEY=clave_secreta_gps_2024
 ```
 
