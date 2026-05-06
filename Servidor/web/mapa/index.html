@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Tracker — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        :root {
+            --bg:        #080c14;
+            --surface:   #0d1424;
+            --border:    #1a2540;
+            --accent:    #00e5ff;
+            --accent2:   #7c3aed;
+            --danger:    #ff4757;
+            --success:   #00e676;
+            --warning:   #ffab00;
+            --text:      #e2e8f0;
+            --muted:     #4a5568;
+            --glow:      0 0 20px rgba(0,229,255,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── HEADER ── */
+	#header {
+	    background: var(--surface);
+	    border-bottom: 1px solid var(--border);
+	    padding: 0 16px;
+	    height: 56px;
+	    display: flex;
+	    align-items: center;
+	    gap: 10px;
+	    flex-shrink: 0;
+	    position: relative;
+	    z-index: 100;
+	    overflow: hidden;
+	}
+
+        #header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 8px;
+        }
+
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            box-shadow: var(--glow);
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+        }
+
+        .divider {
+            width: 1px; height: 32px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        /* Controls */
+        .ctrl-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+	.ctrl-label {
+	    font-size: 9px;
+	    font-weight: 600;
+	    letter-spacing: 0.8px;
+	    color: var(--muted);
+	    text-transform: uppercase;
+	    white-space: nowrap;
+	}
+
+	select, input[type=date], input[type=time] {
+	    background: var(--bg);
+	    color: var(--text);
+	    border: 1px solid var(--border);
+	    padding: 6px 8px;
+	    border-radius: 8px;
+	    font-size: 12px;
+	    font-family: 'Space Mono', monospace;
+	    cursor: pointer;
+	    outline: none;
+	    transition: border-color 0.2s, box-shadow 0.2s;
+	}
+
+	select { min-width: 130px; }
+	input[type=date] { width: 130px; }
+	input[type=time] { width: 82px; }
+
+        select:hover, input[type=date]:hover,
+        select:focus, input[type=date]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+        }
+
+        select { min-width: 160px; }
+
+        /* Buttons */
+	.btn {
+	    display: flex; align-items: center; gap: 5px;
+	    padding: 6px 12px;
+	    border-radius: 8px;
+	    border: none;
+	    font-family: 'Syne', sans-serif;
+	    font-size: 12px;
+	    font-weight: 600;
+	    cursor: pointer;
+	    transition: all 0.2s;
+	    white-space: nowrap;
+	}
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #0099bb);
+            color: #000;
+            box-shadow: 0 0 16px rgba(0,229,255,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,229,255,0.5); }
+
+        .btn-live {
+            background: var(--bg);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        .btn-live:hover { background: rgba(0,230,118,0.1); }
+        .btn-live.active {
+            background: rgba(255,71,87,0.15);
+            color: var(--danger);
+            border-color: var(--danger);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(255,71,87,0); }
+        }
+
+        /* Status badge */
+	#status-badge {
+	    margin-left: auto;
+	    display: flex; align-items: center; gap: 6px;
+	    background: var(--bg);
+	    border: 1px solid var(--border);
+	    padding: 5px 10px;
+	    border-radius: 20px;
+	    font-family: 'Space Mono', monospace;
+	    font-size: 10px;
+	    color: var(--muted);
+	    white-space: nowrap;
+	    flex-shrink: 0;
+	}
+
+        #status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: background 0.3s;
+        }
+        #status-dot.live { background: var(--success); animation: blink 1.5s infinite; }
+        #status-dot.loading { background: var(--warning); }
+        #status-dot.error { background: var(--danger); }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        #status-text { color: var(--text); }
+
+        /* ── MAP ── */
+        #map {
+            flex: 1;
+            z-index: 1;
+        }
+
+        /* Custom leaflet styling */
+        .leaflet-container { background: #0a0f1e !important; }
+        .leaflet-tile { filter: brightness(0.85) saturate(0.7) hue-rotate(200deg); }
+        .leaflet-popup-content-wrapper {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 10px !important;
+            color: var(--text) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-popup-tip { background: var(--surface) !important; }
+        .leaflet-popup-content { font-family: 'Space Mono', monospace; font-size: 12px; line-height: 1.8; }
+        .leaflet-popup-content b { color: var(--accent); font-family: 'Syne', sans-serif; font-size: 13px; }
+
+        /* ── INFO BAR ── */
+        #info-bar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 0 20px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 100;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 20px;
+            border-right: 1px solid var(--border);
+            min-width: 110px;
+        }
+        .stat:first-child { padding-left: 0; }
+        .stat:last-child { border-right: none; }
+
+        .stat-label {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-top: 1px;
+        }
+
+        .stat-value.green { color: var(--success); }
+        .stat-value.yellow { color: var(--warning); }
+        .stat-value.red { color: var(--danger); }
+
+        /* ── CLEAR BUTTON ── */
+        #btn-clear {
+            position: fixed;
+            bottom: 72px;
+            right: 20px;
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--danger);
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 500;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        #btn-clear:hover {
+            background: rgba(255,71,87,0.15);
+            border-color: var(--danger);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255,71,87,0.3);
+        }
+
+        /* ── MODAL ── */
+        #modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-overlay.show { display: flex; }
+
+        #modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            width: 360px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+            animation: slideUp 0.2s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        .modal-icon {
+            width: 52px; height: 52px;
+            background: rgba(255,71,87,0.15);
+            border: 1px solid rgba(255,71,87,0.3);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 16px;
+        }
+
+        #modal-box h3 {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        #modal-box p {
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        #select-clear {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .warning-text {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(255,71,87,0.08);
+            border: 1px solid rgba(255,71,87,0.2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--danger);
+            margin-bottom: 20px;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .modal-actions {
+            display: flex; gap: 10px;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover { border-color: var(--muted); }
+
+        .btn-delete {
+            flex: 1;
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Syne', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover { background: #ff6b7a; transform: translateY(-1px); }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-size: 13px;
+            font-family: 'Space Mono', monospace;
+            color: var(--text);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        #toast.success { border-color: var(--success); color: var(--success); }
+        #toast.error   { border-color: var(--danger);  color: var(--danger);  }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        @media (max-width: 768px) {
+            #header { gap: 8px; padding: 0 12px; flex-wrap: wrap; height: auto; padding: 10px 12px; }
+            .divider { display: none; }
+            #status-badge { display: none; }
+            .stat { min-width: 80px; padding: 0 12px; }
+            .stat-value { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+    <div class="logo">
+        <div class="logo-icon">📡</div>
+        <span class="logo-text">GPS Tracker</span>
+    </div> 
+
+    <div class="divider"></div>
+
+    <div class="ctrl-group">
+        <span class="ctrl-label">Dispositivo</span>
+        <select id="select-device">
+            <option value="">Cargando...</option>
+        </select>
+    </div>
+
+    <div class="ctrl-group">
+        <span class="ctrl-label">Fecha</span>
+        <input type="date" id="select-date"/>
+    </div>
+
+    <div class="ctrl-group">
+        <span class="ctrl-label">Desde</span>
+        <input type="time" id="time-start" value="00:00"/>
+    </div>
+
+    <div class="ctrl-group">
+        <span class="ctrl-label">Hasta</span>
+        <input type="time" id="time-end" value="23:59"/>
+    </div>
+
+    <button class="btn btn-primary" onclick="loadRoute()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></svg>
+        Ver Recorrido
+    </button>
+
+    <button class="btn btn-live" id="btn-live" onclick="toggleLive()">
+        <span id="live-dot" style="width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block"></span>
+        Tiempo Real
+    </button>
+
+    <div id="status-badge">
+        <div id="status-dot"></div>
+        <span id="status-text">Listo</span>
+    </div>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- INFO BAR -->
+<div id="info-bar">
+    <div class="stat">
+        <span class="stat-label">Dispositivo</span>
+        <span class="stat-value" id="info-device">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Fecha</span>
+        <span class="stat-value" id="info-date" style="color:var(--text);font-size:12px">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Puntos</span>
+        <span class="stat-value" id="info-points">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Última posición</span>
+        <span class="stat-value" id="info-last" style="color:var(--text);font-size:11px">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Batería</span>
+        <span class="stat-value green" id="info-battery">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Velocidad</span>
+        <span class="stat-value yellow" id="info-speed">—</span>
+    </div>
+    <div class="stat">
+        <span class="stat-label">Precisión GPS</span>
+        <span class="stat-value" id="info-accuracy" style="color:var(--accent2)">—</span>
+    </div>
+</div>
+
+<!-- CLEAR BUTTON -->
+<button id="btn-clear" onclick="openModal()" title="Limpiar base de datos">🗑️</button>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+    <div id="modal-box">
+        <div class="modal-icon">🗑️</div>
+        <h3>Limpiar Base de Datos</h3>
+        <p>Selecciona el dispositivo cuyos registros deseas eliminar permanentemente.</p>
+        <select id="select-clear"></select>
+        <div class="warning-text">
+            ⚠️ Esta acción no se puede deshacer
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+            <button class="btn-delete" onclick="confirmClear()">Eliminar registros</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const API     = 'http://18.190.159.143';
+    const API_KEY = 'clave_secreta_gps_2024';
+    const HEADERS = { 'x-api-key': API_KEY };
+
+    // Paleta de colores para múltiples dispositivos
+    const COLORS = [
+        { line: '#00e5ff', dot: '#00e5ff', glow: 'rgba(0,229,255,0.4)' },
+        { line: '#ff6b6b', dot: '#ff6b6b', glow: 'rgba(255,107,107,0.4)' },
+        { line: '#ffd93d', dot: '#ffd93d', glow: 'rgba(255,217,61,0.4)'  },
+        { line: '#6bcb77', dot: '#6bcb77', glow: 'rgba(107,203,119,0.4)' },
+        { line: '#ff922b', dot: '#ff922b', glow: 'rgba(255,146,43,0.4)'  },
+        { line: '#cc5de8', dot: '#cc5de8', glow: 'rgba(204,93,232,0.4)'  },
+    ];
+
+    // Estado global
+    let routeLayers  = [];   // capas de rutas activas
+    let liveMarkers  = {};   // marcadores live por device
+    let liveInterval = null;
+    let isLive       = false;
+
+    // ── MAPA ──────────────────────────────────────────
+    const map = L.map('map', { zoomControl: true }).setView([-13.5319, -71.9675], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const markersGroup = L.layerGroup().addTo(map);
+
+    // ── HELPERS ───────────────────────────────────────
+    function kmh(s)    { return (s * 3.6).toFixed(1); }
+    function fmtTime(t){ return t ? t.replace('T',' ').substring(0,19) : '—'; }
+
+    function setStatus(text, type='') {
+        document.getElementById('status-text').textContent = text;
+        document.getElementById('status-dot').className = type;
+    }
+
+    function showToast(msg, type='') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show ' + type;
+        setTimeout(() => t.className = '', 3000);
+    }
+
+    function mkDotIcon(color, size=12) {
+        return L.divIcon({
+            html: `<div style="width:${size}px;height:${size}px;border-radius:50%;
+                   background:${color};border:2px solid #fff;
+                   box-shadow:0 0 8px ${color}88"></div>`,
+            className:'', iconSize:[size,size], iconAnchor:[size/2,size/2]
+        });
+    }
+
+    function mkLiveIcon(color) {
+        return L.divIcon({
+            html: `<div style="position:relative;width:36px;height:36px">
+                <div style="position:absolute;inset:0;border-radius:50%;
+                     background:${color}33;animation:ripple 1.5s infinite"></div>
+                <div style="position:absolute;inset:8px;border-radius:50%;
+                     background:${color};box-shadow:0 0 14px ${color}"></div>
+            </div>
+            <style>
+                @keyframes ripple{0%{transform:scale(1);opacity:0.7}
+                100%{transform:scale(2.8);opacity:0}}
+            </style>`,
+            className:'', iconSize:[36,36], iconAnchor:[18,18]
+        });
+    }
+
+    function mkFlagIcon(label, color) {
+        return L.divIcon({
+            html: `<div style="font-size:20px;filter:drop-shadow(0 0 5px ${color})">
+                   ${label}</div>`,
+            className:'', iconSize:[24,24], iconAnchor:[12,12]
+        });
+    }
+
+    // ── LIMPIAR MAPA ──────────────────────────────────
+    function clearRoutes() {
+        routeLayers.forEach(l => map.removeLayer(l));
+        routeLayers = [];
+        markersGroup.clearLayers();
+    }
+
+    function clearLive() {
+        Object.values(liveMarkers).forEach(m => map.removeLayer(m));
+        liveMarkers = {};
+    }
+
+    function clearAll() {
+        clearRoutes();
+        clearLive();
+    }
+
+    // ── CARGAR DISPOSITIVOS ───────────────────────────
+    async function loadDevices() {
+        try {
+            const res     = await fetch(`${API}/api/devices`, { headers: HEADERS });
+            const devices = await res.json();
+
+            ['select-device', 'select-clear'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const isMain = id === 'select-device';
+                sel.innerHTML = isMain
+                    ? '<option value="">— Seleccionar —</option><option value="ALL">📡 Todos los dispositivos</option>'
+                    : '<option value="ALL">🔴 Todos los dispositivos</option>';
+                devices.forEach((d, i) => {
+                    const o = document.createElement('option');
+                    o.value = d;
+                    o.textContent = (isMain ? `${getColorDot(i)} ` : '📱 ') + d;
+                    sel.appendChild(o);
+                });
+            });
+        } catch(e) {
+            setStatus('Error de conexión', 'error');
+        }
+    }
+
+    function getColorDot(i) {
+        const dots = ['🔵','🔴','🟡','🟢','🟠','🟣'];
+        return dots[i % dots.length];
+    }
+
+    function setTodayDate() {
+        document.getElementById('select-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    // ── VER RECORRIDO ─────────────────────────────────
+    async function loadRoute() {
+        // Detener live si estaba activo
+        if (isLive) await stopLive();
+
+        const device    = document.getElementById('select-device').value;
+        const date      = document.getElementById('select-date').value;
+        const timeStart = document.getElementById('time-start').value || '00:00';
+        const timeEnd   = document.getElementById('time-end').value   || '23:59';
+
+        if (!device) { showToast('⚠️ Selecciona un dispositivo', 'error'); return; }
+        if (!date)   { showToast('⚠️ Selecciona una fecha', 'error');      return; }
+
+        setStatus('Cargando...', 'loading');
+        clearAll();
+
+        try {
+            if (device === 'ALL') {
+                // Obtener lista de dispositivos
+                const res     = await fetch(`${API}/api/devices`, { headers: HEADERS });
+                const devices = await res.json();
+
+                let totalPoints = 0;
+                const bounds = [];
+
+                for (let i = 0; i < devices.length; i++) {
+                    const color  = COLORS[i % COLORS.length];
+                    const points = await fetchPoints(devices[i], date, timeStart, timeEnd);
+                    if (points.length) {
+                        drawSingleRoute(points, devices[i], color);
+                        totalPoints += points.length;
+                        points.forEach(p => bounds.push([p.latitude, p.longitude]));
+                    }
+                }
+
+                if (bounds.length) map.fitBounds(bounds, { padding: [40,40] });
+                setStatus(`${totalPoints} puntos — ${devices.length} dispositivos`, 'live');
+                updateInfoBar('TODOS', date, totalPoints);
+
+            } else {
+                const colorIdx = getDeviceColorIndex(device);
+                const color    = COLORS[colorIdx % COLORS.length];
+                const points   = await fetchPoints(device, date, timeStart, timeEnd);
+
+                if (!points.length) {
+                    setStatus('Sin datos', '');
+                    showToast('📭 No hay registros para ese filtro');
+                    return;
+                }
+
+                drawSingleRoute(points, device, color);
+                map.fitBounds(routeLayers[0].getBounds(), { padding: [40,40] });
+                setStatus(`${points.length} puntos`, 'live');
+                updateInfoBar(device, date, points);
+            }
+
+        } catch(e) {
+            setStatus('Error', 'error');
+            showToast('❌ Error cargando recorrido', 'error');
+        }
+    }
+
+    async function fetchPoints(device, date, timeStart, timeEnd) {
+        const res = await fetch(
+            `${API}/api/locations/${device}/date/${date}?hora_inicio=${timeStart}&hora_fin=${timeEnd}`,
+            { headers: HEADERS }
+        );
+        return await res.json();
+    }
+
+    function drawSingleRoute(points, device, color) {
+        const coords = points.map(p => [p.latitude, p.longitude]);
+
+        // Sombra ruta
+        const shadow = L.polyline(coords, { color: color.line, weight: 7, opacity: 0.2 }).addTo(map);
+        routeLayers.push(shadow);
+
+        // Línea principal
+        const line = L.polyline(coords, { color: color.line, weight: 3, opacity: 0.95 }).addTo(map);
+        routeLayers.push(line);
+
+        // Marcador inicio
+        const mStart = L.marker(coords[0], { icon: mkFlagIcon('🟢', color.line) })
+            .bindPopup(`<b style="color:${color.line}">▶ Inicio — ${device}</b><br>
+                🕐 ${fmtTime(points[0].timestamp)}<br>
+                🔋 ${points[0].battery}%`)
+            .addTo(markersGroup);
+
+        // Marcador fin
+        const mEnd = L.marker(coords[coords.length-1], { icon: mkFlagIcon('🏁', color.line) })
+            .bindPopup(`<b style="color:${color.line}">⏹ Fin — ${device}</b><br>
+                🕐 ${fmtTime(points[points.length-1].timestamp)}<br>
+                🔋 ${points[points.length-1].battery}%<br>
+                💨 ${kmh(points[points.length-1].speed)} km/h`)
+            .addTo(markersGroup);
+
+        // Puntos intermedios
+        points.forEach((p, i) => {
+            if (i % 8 === 0 && i > 0 && i < points.length-1) {
+                L.circleMarker([p.latitude, p.longitude], {
+                    radius: 5,
+                    color: color.dot,
+                    fillColor: color.dot,
+                    fillOpacity: 0.9,
+                    weight: 2
+                }).bindPopup(`
+                    <b style="color:${color.line}">${device}</b><br>
+                    🕐 ${fmtTime(p.timestamp)}<br>
+                    🔋 ${p.battery}%<br>
+                    💨 ${kmh(p.speed)} km/h<br>
+                    🎯 ±${Math.round(p.accuracy)}m
+                `).addTo(markersGroup);
+            }
+        });
+    }
+
+    // Cache índice de color por dispositivo
+    const deviceColorMap = {};
+    let colorCounter = 0;
+    function getDeviceColorIndex(device) {
+        if (deviceColorMap[device] === undefined) {
+            deviceColorMap[device] = colorCounter++;
+        }
+        return deviceColorMap[device];
+    }
+
+    // ── TIEMPO REAL ───────────────────────────────────
+    async function toggleLive() {
+        if (isLive) {
+            await stopLive();
+        } else {
+            await startLive();
+        }
+    }
+
+    async function startLive() {
+        const device = document.getElementById('select-device').value;
+        if (!device) { showToast('⚠️ Selecciona un dispositivo', 'error'); return; }
+
+        // Limpiar recorridos anteriores
+        clearRoutes();
+
+        isLive = true;
+        const btn = document.getElementById('btn-live');
+        btn.textContent = '⏹ Detener Live';
+        btn.classList.add('active');
+        setStatus('LIVE', 'live');
+
+        await updateLive();
+        liveInterval = setInterval(updateLive, 10000);
+    }
+
+    async function stopLive() {
+        isLive = false;
+        clearInterval(liveInterval);
+        liveInterval = null;
+        clearLive();
+
+        const btn = document.getElementById('btn-live');
+        btn.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block"></span> Tiempo Real';
+        btn.classList.remove('active');
+        setStatus('Listo', '');
+    }
+
+    async function updateLive() {
+        const device = document.getElementById('select-device').value;
+        if (!device) return;
+
+        try {
+            if (device === 'ALL') {
+                // Actualizar todos los dispositivos
+                const res     = await fetch(`${API}/api/devices`, { headers: HEADERS });
+                const devices = await res.json();
+
+                for (let i = 0; i < devices.length; i++) {
+                    await updateDeviceLive(devices[i], COLORS[i % COLORS.length]);
+                }
+                setStatus(`LIVE — ${devices.length} dispositivos`, 'live');
+
+            } else {
+                const colorIdx = getDeviceColorIndex(device);
+                await updateDeviceLive(device, COLORS[colorIdx % COLORS.length]);
+                setStatus(`LIVE — ${fmtTime(new Date().toISOString())}`, 'live');
+            }
+
+        } catch(e) { setStatus('Error live', 'error'); }
+    }
+
+    async function updateDeviceLive(device, color) {
+        try {
+            const res = await fetch(`${API}/api/locations/${device}/latest`, { headers: HEADERS });
+            const p   = await res.json();
+
+            if (liveMarkers[device]) map.removeLayer(liveMarkers[device]);
+
+            liveMarkers[device] = L.marker([p.latitude, p.longitude], {
+                icon: mkLiveIcon(color.line)
+            }).bindPopup(`
+                <b style="color:${color.line}">📡 ${device}</b><br>
+                🕐 ${fmtTime(p.timestamp)}<br>
+                🔋 ${p.battery}%<br>
+                💨 ${kmh(p.speed)} km/h<br>
+                🎯 ±${Math.round(p.accuracy)}m
+            `).addTo(map);
+
+            // Si solo hay un dispositivo, seguirlo con la cámara
+            const sel = document.getElementById('select-device').value;
+            if (sel !== 'ALL') {
+                map.panTo([p.latitude, p.longitude], { animate: true, duration: 1 });
+                updateInfoBar(device, '—', [p]);
+                document.getElementById('info-last').textContent     = fmtTime(p.timestamp);
+                document.getElementById('info-battery').textContent  = p.battery + '%';
+                document.getElementById('info-speed').textContent    = kmh(p.speed) + ' km/h';
+                document.getElementById('info-accuracy').textContent = '±' + Math.round(p.accuracy) + 'm';
+                const bat = document.getElementById('info-battery');
+                bat.className = 'stat-value ' + (p.battery > 50 ? 'green' : p.battery > 20 ? 'yellow' : 'red');
+            }
+
+        } catch(e) { /* dispositivo sin datos */ }
+    }
+
+    // ── INFO BAR ──────────────────────────────────────
+    function updateInfoBar(device, date, pointsOrCount) {
+        document.getElementById('info-device').textContent = device;
+        document.getElementById('info-date').textContent   = date;
+
+        if (typeof pointsOrCount === 'number') {
+            document.getElementById('info-points').textContent = pointsOrCount;
+            return;
+        }
+
+        const points = pointsOrCount;
+        const last   = points[points.length-1];
+        document.getElementById('info-points').textContent   = points.length;
+        document.getElementById('info-last').textContent     = fmtTime(last.timestamp);
+        document.getElementById('info-battery').textContent  = last.battery + '%';
+        document.getElementById('info-speed').textContent    = kmh(last.speed) + ' km/h';
+        document.getElementById('info-accuracy').textContent = '±' + Math.round(last.accuracy) + 'm';
+
+        const bat = document.getElementById('info-battery');
+        bat.className = 'stat-value ' + (last.battery > 50 ? 'green' : last.battery > 20 ? 'yellow' : 'red');
+    }
+
+    // ── MODAL LIMPIAR ─────────────────────────────────
+    function openModal() {
+        const selDevice = document.getElementById('select-device');
+        const selClear  = document.getElementById('select-clear');
+        selClear.innerHTML = '<option value="ALL">🔴 Todos los dispositivos</option>';
+        for (let i = 1; i < selDevice.options.length; i++) {
+            if (selDevice.options[i].value === 'ALL') continue;
+            const o = document.createElement('option');
+            o.value = selDevice.options[i].value;
+            o.textContent = '📱 ' + selDevice.options[i].value;
+            selClear.appendChild(o);
+        }
+        document.getElementById('modal-overlay').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('show');
+    }
+
+    async function confirmClear() {
+        const device = document.getElementById('select-clear').value;
+        try {
+            const res  = await fetch(`${API}/api/locations/clear/${device}`, { method:'DELETE', headers: HEADERS });
+            const data = await res.json();
+            closeModal();
+            clearAll();
+            await loadDevices();
+            showToast('✅ ' + data.message, 'success');
+            setStatus('BD limpiada', '');
+        } catch(e) {
+            showToast('❌ Error al limpiar', 'error');
+        }
+    }
+
+    // ── INIT ──────────────────────────────────────────
+    loadDevices();
+    setTodayDate();
+</script>
+
+</body>
+</html>
+

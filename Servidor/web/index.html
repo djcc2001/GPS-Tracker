@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor Embebidos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+        }
+
+        /* ── ANIMATED GRADIENT BACKGROUND ── */
+        body {
+            background: #0a0015;
+            position: relative;
+        }
+
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.55;
+            animation: drift linear infinite;
+        }
+
+        .b1 {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, #7c3aed, #4c1d95);
+            top: -200px; left: -100px;
+            animation-duration: 18s;
+        }
+        .b2 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #2563eb, #1e40af);
+            top: 50%; right: -150px;
+            animation-duration: 22s;
+            animation-delay: -8s;
+        }
+        .b3 {
+            width: 450px; height: 450px;
+            background: radial-gradient(circle, #db2777, #9d174d);
+            bottom: -100px; left: 30%;
+            animation-duration: 20s;
+            animation-delay: -4s;
+        }
+        .b4 {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, #0891b2, #0e7490);
+            top: 20%; left: 40%;
+            animation-duration: 25s;
+            animation-delay: -12s;
+        }
+
+        @keyframes drift {
+            0%   { transform: translate(0, 0) scale(1); }
+            25%  { transform: translate(40px, -30px) scale(1.05); }
+            50%  { transform: translate(-20px, 50px) scale(0.95); }
+            75%  { transform: translate(30px, 20px) scale(1.03); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* Noise texture overlay */
+        .bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* ── LAYOUT ── */
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            gap: 0;
+        }
+
+        /* ── STATUS PILL ── */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 100px;
+            padding: 7px 18px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 0.8px;
+            margin-bottom: 28px;
+            animation: fadeIn 0.8s ease both;
+        }
+
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+            animation: blink 2s ease infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px #4ade80; }
+            50%       { opacity: 0.4; box-shadow: none; }
+        }
+
+        /* ── HEADING ── */
+        h1 {
+            font-size: clamp(40px, 7vw, 80px);
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.05;
+            letter-spacing: -2px;
+            color: #fff;
+            margin-bottom: 14px;
+            animation: fadeIn 0.8s ease 0.1s both;
+        }
+
+        h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #67e8f9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+            font-weight: 400;
+            letter-spacing: 0.2px;
+            margin-bottom: 48px;
+            animation: fadeIn 0.8s ease 0.2s both;
+        }
+
+        /* ── GLASS CARDS ── */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            width: 100%;
+            max-width: 680px;
+            animation: fadeIn 0.8s ease 0.3s both;
+        }
+
+        .card {
+            position: relative;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 28px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            display: block;
+        }
+
+        /* Inner glass shine */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            border-radius: 24px 24px 0 0;
+        }
+
+        /* Colored glow on hover */
+        .card::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 24px;
+            opacity: 0;
+            transition: opacity 0.4s;
+            z-index: -1;
+        }
+
+        .card-games::after {
+            background: linear-gradient(135deg, rgba(124,58,237,0.4), rgba(37,99,235,0.4));
+            filter: blur(20px);
+        }
+
+        .card-map::after {
+            background: linear-gradient(135deg, rgba(5,150,105,0.4), rgba(8,145,178,0.4));
+            filter: blur(20px);
+        }
+
+        .card:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-6px) scale(1.01);
+        }
+
+        .card:hover::after { opacity: 1; }
+
+        .card-games:hover { box-shadow: 0 24px 60px rgba(124,58,237,0.25), inset 0 1px 0 rgba(255,255,255,0.15); }
+        .card-map:hover   { box-shadow: 0 24px 60px rgba(5,150,105,0.25),  inset 0 1px 0 rgba(255,255,255,0.15); }
+
+        /* Card icon */
+        .card-icon {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            margin-bottom: 18px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .icon-games { background: rgba(124,58,237,0.25); }
+        .icon-map   { background: rgba(5,150,105,0.25); }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 7px;
+            color: #fff;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .tag-purple { border-color: rgba(167,139,250,0.3); color: #c4b5fd; background: rgba(124,58,237,0.12); }
+        .tag-blue   { border-color: rgba(96,165,250,0.3);  color: #93c5fd; background: rgba(37,99,235,0.12); }
+        .tag-green  { border-color: rgba(74,222,128,0.3);  color: #86efac; background: rgba(5,150,105,0.12); }
+        .tag-cyan   { border-color: rgba(103,232,249,0.3); color: #a5f3fc; background: rgba(8,145,178,0.12); }
+
+        /* CTA row */
+        .card-cta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .cta-label {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .cta-games { color: #a78bfa; }
+        .cta-map   { color: #34d399; }
+
+        .cta-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .card:hover .cta-btn {
+            transform: translate(3px, -3px);
+            background: rgba(255,255,255,0.12);
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            margin-top: 32px;
+            animation: fadeIn 0.8s ease 0.5s both;
+            text-align: center;
+        }
+
+        .footer-glass {
+            display: inline-flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 100px;
+            padding: 10px 24px;
+        }
+
+        .f-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0.5px;
+        }
+
+        .f-dot {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+        }
+
+        .fd-green  { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+        .fd-blue   { background: #60a5fa; box-shadow: 0 0 6px #60a5fa; }
+        .fd-purple { background: #a78bfa; box-shadow: 0 0 6px #a78bfa; }
+
+        .f-sep {
+            width: 1px; height: 14px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 560px) {
+            .cards { grid-template-columns: 1fr; max-width: 360px; }
+            h1 { letter-spacing: -1px; }
+            .footer-glass { flex-wrap: wrap; gap: 10px; justify-content: center; }
+            .f-sep { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Animated blobs -->
+<div class="bg">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="blob b4"></div>
+</div>
+
+<div class="wrapper">
+
+    <div class="status-pill">
+        <div class="status-dot"></div>
+        18.190.159.143 — todos los servicios activos
+    </div>
+
+    <h1>Servidor<br><em>Embebidos</em></h1>
+    <p class="subtitle">AWS EC2 · Ubuntu 24.04 · Apache + FastAPI</p>
+
+    <div class="cards">
+
+        <!-- JUEGOS -->
+        <a href="/Juegos" class="card card-games">
+            <div class="card-icon icon-games">🎮</div>
+            <h2 class="card-title">Juegos</h2>
+            <p class="card-desc">Colección de juegos interactivos desarrollados con tecnologías web.</p>
+            <div class="tags">
+                <span class="tag tag-purple">HTML5</span>
+                <span class="tag tag-blue">JavaScript</span>
+                <span class="tag tag-blue">Canvas API</span>
+            </div>
+            <div class="card-cta">
+                <span class="cta-label cta-games">Ir a juegos →</span>
+                <div class="cta-btn">↗</div>
+            </div>
+        </a>
+
+        <!-- GPS TRACKER -->
+        <a href="/mapa" class="card card-map">
+            <div class="card-icon icon-map">📡</div>
+            <h2 class="card-title">GPS Tracker</h2>
+            <p class="card-desc">Rastreo GPS en tiempo real con historial de recorridos por dispositivo.</p>
+            <div class="tags">
+                <span class="tag tag-green">Tiempo real</span>
+                <span class="tag tag-cyan">Leaflet.js</span>
+                <span class="tag tag-green">PostgreSQL</span>
+            </div>
+            <div class="card-cta">
+                <span class="cta-label cta-map">Ver mapa →</span>
+                <div class="cta-btn">↗</div>
+            </div>
+        </a>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-glass">
+            <div class="f-item"><div class="f-dot fd-green"></div>API activa</div>
+            <div class="f-sep"></div>
+            <div class="f-item"><div class="f-dot fd-green"></div>PostgreSQL</div>
+            <div class="f-sep"></div>
+            <div class="f-item"><div class="f-dot fd-blue"></div>Apache</div>
+            <div class="f-sep"></div>
+            <div class="f-item"><div class="f-dot fd-purple"></div>GPS Tracker v1.0</div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
