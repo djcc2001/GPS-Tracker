@@ -179,4 +179,4 @@ const val INTERVAL_MS = 10000L  // 10 segundos
 
 ## 📄 Licencia
 
-MIT License — © 2024 Denis Jair Cancinas Cardenas
+MIT License — © 2026 Denis Jair Cancinas Cardenas

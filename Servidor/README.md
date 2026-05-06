@@ -196,4 +196,4 @@ const API_KEY = 'clave_secreta_gps_2024';   // Tu API Key
 
 ## 📄 Licencia
 
-MIT License — © 2024 Denis Jair Cancinas Cardenas
+MIT License — © 2026 Denis Jair Cancinas Cardenas
