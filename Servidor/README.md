@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Panel Web](../imgs/mapa.png)
+<img src="../imgs/mapa.png" width="600"/>
 
 *Dashboard de visualización de recorridos*
 

@@ -2,13 +2,13 @@
 
 <div align="center">
 
-![Aplicación Android](./imgs/apk.png)
+<img src="./imgs/apk.png" width="300"/>
 
 *Aplicación Android para captura de ubicación*
 
 ---
 
-![Panel Web](./imgs/mapa.png)
+<img src="./imgs/mapa.png" width="600"/>
 
 *Dashboard web de visualización de recorridos*
 

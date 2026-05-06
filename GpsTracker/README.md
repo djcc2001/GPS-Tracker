@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Captura de App](../imgs/apk.png)
+<img src="../imgs/apk.png" width="300"/>
 
 *Interfaz de la aplicación*
 
